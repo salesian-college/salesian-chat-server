@@ -1,0 +1,15 @@
+{
+    "mongo": {
+        "url": "localhost",
+        "port": "27017",
+        "username": "salesian",
+        "password": "S4les1an1901"
+    },
+    "channels": [
+        "test1",
+        "test2",
+        "test3",
+        "test4",
+        "test5"
+    ]
+}

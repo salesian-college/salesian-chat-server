@@ -8,14 +8,15 @@
   "private": "true",
   "scripts": {
     "dev": "nodemon --signal SIGHUP --exec babel-node src/main.js",
-	"start": "babel-node src/main.js"
+    "start": "babel-node src/main.js"
   },
   "dependencies": {
     "@keyv/sqlite": "^2.0.2",
-    "cors": "^2.8.5",
-    "express": "^4.17.1",
     "chalk": "^3.0.0",
+    "cors": "^2.8.5",
     "debug": "^4.1.1",
+    "express": "^4.17.1",
+    "mongodb": "^4.1.2",
     "nicely-format": "^1.1.0"
   },
   "devDependencies": {
