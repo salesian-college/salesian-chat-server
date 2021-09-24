@@ -70,28 +70,28 @@ const createLogger = (title,
     },
     info (...messages) {
       logger({
-        title: blue(title),
+        title: blue('INFO'),
         messages,
         logFunction
       })
     },
     warn (...messages) {
       logger({
-        title: yellow(`WARNING ${title}`),
+        title: yellow(`WARNING`),
         messages,
         logFunction
       })
     },
     error (...messages) {
       logger({
-        title: red(`ERROR ${title}`),
+        title: red(`ERROR`),
         messages,
         logFunction
       })
     },
     fatal (...messages) {
       logger({
-        title: red(`========= FATAL ${title} =========`),
+        title: red(`========= FATAL =========`),
         messages,
         logFunction
       })

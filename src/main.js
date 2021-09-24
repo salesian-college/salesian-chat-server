@@ -10,15 +10,16 @@ let channelDatabase
 
 app.use(cors())
 app.use(express.json());
-app.use(function(e, req, res, next) {
-    if (e.message === "Bad request") {
-        res.status(400).json({error: {msg: e.message, stack: e.stack}});
-    }
-});
 
-app.get('/api', (req, res) => {
-    res.send("Server side")
-})
+const fourzerofour = (req, res) => {
+    res.status(404).json({ error: "Not Found" });
+    log('error', '', `Not found:      IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Address: ${req.originalUrl}`)
+}
+
+const fourzerozero = (req, res) => {
+    res.status(400).json({ error: "Not Found" });
+    log('error', '', `Bad Request:    IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Address: ${req.originalUrl}`)
+}
 
 app.get("/api/channel", (req, res) => {
     channelDatabase.listCollections()
@@ -28,64 +29,95 @@ app.get("/api/channel", (req, res) => {
 })
 
 app.get("/api/channel/:channel", (req, res) => {
-    channelDatabase.listCollections()
-        .toArray()
-        .then((collectionList) => collectionList.filter(collection => req.params.channel === collection.name))
-        .then((collectionList) => collectionList.map(collection => collection.name))
-        .then((collectionList) => res.send(collectionList))
+    channelDatabase.listCollections({ name: req.params.channel })
+        .next(function (err, collinfo) {
+            if (collinfo) {
+                channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
+                    if (err) throw err
+                    result.forEach(message => {
+                        delete message["ip"]
+                        delete message["_id"]
+                    })
+                    res.send(result)
+                })
+            }
+            else fourzerofour(req, res)
+        });
 })
 
 app.post("/api/channel/:channel", (req, res) => {
     if (req.body) {
-        if (req.body == Object) {
-            for (var key in req.body) if (!(key === "content" || key === "time")) delete req.body[key]
-            req.body.ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
-            channelDatabase.collection("customers").insertOne(req.body, function(err, res) {
+        if (req.body.content) {
+            for (var key in req.body) if (!(key === "content")) delete req.body[key]
+            req.body.ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+            req.body.date = Math.floor(Date.now() / 1000)
+            channelDatabase.collection(req.params.channel).insertOne(req.body, (err, result) => {
                 if (err) throw err;
-                res.send("Sent Sucessfully")
-                log('info', 'Server', `Message posted. IP: ${req.body.ip}, Content: ${req.body.content}, ID: ${res._id}`)
-            });
+                channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
+                    if (err) throw err
+                    result.forEach(message => {
+                        delete message["ip"]
+                        delete message["_id"]
+                    })
+                    res.send(result)
+                })
+                log('info', 'INFO', `Message posted:  IP: ${req.body.ip}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
+            })
         }
-        else throw new Error("Bad request")
+        else fourzerozero(req, res)
     }
-    else throw new Error("Bad request")
+    else fourzerozero(req, res)
 })
 
-app.patch("/api/channel/:channel", (req, res) => {
+app.post("/api/channel/:channel/delete", (req, res) => {
     if (req.body) {
-        if (req.body == Object) {
-            for (var key in req.body) if (!(key === "delete")) delete req.body[key]
-            req.body.ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
-            channelDatabase.collection("customers").insertOne(req.body, function(err, res) {
+        if (req.body.content) {
+            delete req.body._id
+            channelDatabase.collection(req.params.channel).deleteOne(req.body, (err, obj) => {
                 if (err) throw err;
-                res.send("Sent Sucessfully")
+                if (obj.deletedCount === 0) {
+                    fourzerofour(req, res)
+                }
+                else {
+                    channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
+                        if (err) throw err
+                        result.forEach(message => {
+                            delete message["ip"]
+                            delete message["_id"]
+                        })
+                        res.send(result)
+                    })
+                    log('info', 'INFO', `Message deleted: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
+                }
             });
         }
-        else throw new Error("Bad request")
+        else fourzerozero(req, res)
     }
-    else throw new Error("Bad request")
+    else fourzerozero(req, res)
 })
 
-app.all('*', function(req, res) {
-    throw new Error("Bad request")
+
+
+app.all('*', function (req, res) {
+    fourzerofour(req, res)
 })
 
-MongoClient.connect(`mongodb://${config.mongo.username}:${config.mongo.password}@${config.mongo.url}:${config.mongo.port}/`, function (err, db) {
+MongoClient.connect(`mongodb://${config.mongo.username}:${config.mongo.password}@${config.mongo.url}:${config.mongo.port}/`, (err, db) => {
     if (err) throw err
 
-    log('info', 'Server', 'Connected to mongodb')
+    log('info', 'INFO', 'Connected to mongodb.')
 
     channelDatabase = db.db("channels")
 
     config.channels.forEach(channel => {
         channelDatabase.createCollection(channel, function (err, res) {
-            if (err) log('info', 'Server', 'Collection detected.')
-            else log('info', 'Server', 'Collection created.')
+            if (err) log('info', 'INFO', 'Collection detected.')
+            else log('info', 'INFO', 'Collection created.')
         })
     })
 
     var port = 3001;
     app.listen(port, () => {
-        log('info', 'Server', `Running on: http://localhost:${port}`)
+        log('info', 'INFO', `Running on: http://localhost:${port}.`)
     })
 })
