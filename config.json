@@ -6,10 +6,27 @@
         "password": "S4les1an1901"
     },
     "channels": [
-        "test1",
-        "test2",
-        "test3",
-        "test4",
-        "test5"
-    ]
+        "art",
+        "biology",
+        "buisness",
+        "chemsitry",
+        "classics",
+        "computerscience",
+        "dramaandtheatre",
+        "economics",
+        "englishliterature",
+        "french",
+        "geography",
+        "history",
+        "maths",
+        "furhtermaths",
+        "music",
+        "philosophyandethics",
+        "physicaleducation",
+        "physics",
+        "politics",
+        "psycology",
+        "spanish"
+    ],
+    "dashboardPassword": "S4les1an1901"
 }

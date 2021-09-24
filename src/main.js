@@ -2,6 +2,7 @@ import log from './utils/log'
 import express from 'express'
 import cors from 'cors'
 import config from '../config.json'
+import e from 'express';
 
 var MongoClient = require("mongodb").MongoClient;
 const app = express()
@@ -25,6 +26,7 @@ app.get("/api/channel", (req, res) => {
     channelDatabase.listCollections()
         .toArray()
         .then((collectionList) => collectionList.map(collection => collection.name))
+        .then((collectionList) => collectionList.sort())
         .then((collectionList) => res.send(collectionList))
 })
 
@@ -45,10 +47,27 @@ app.get("/api/channel/:channel", (req, res) => {
         });
 })
 
+app.post("/api/login", (req, res) => {
+    if (req.body.password === config.dashboardPassword) {
+        log('info', 'INFO', `Logged In:       IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`)
+        res.send({ "password": config.dashboardPassword })
+    }
+    else {
+        res.status(403).json({ error: "Invalid Password" });
+        log('error', '', `Invalid Password: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Password: ${req.body.password}`)
+    }
+})
+
 app.post("/api/channel/:channel", (req, res) => {
     if (req.body) {
         if (req.body.content) {
             for (var key in req.body) if (!(key === "content")) delete req.body[key]
+            if (req.headers["sal-token"] === config.dashboardPassword) {
+                req.body.bold = true
+            }
+            else {
+                req.body.bold = false
+            }
             req.body.ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
             req.body.date = Math.floor(Date.now() / 1000)
             channelDatabase.collection(req.params.channel).insertOne(req.body, (err, result) => {
@@ -61,7 +80,7 @@ app.post("/api/channel/:channel", (req, res) => {
                     })
                     res.send(result)
                 })
-                log('info', 'INFO', `Message posted:  IP: ${req.body.ip}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
+                log('info', 'INFO', `Message posted:  IP: ${req.body.ip}    Content: ${req.body.content}    Channel: ${req.params.channel}    Bold: ${req.body.bold}.`)
             })
         }
         else fourzerozero(req, res)
@@ -72,24 +91,30 @@ app.post("/api/channel/:channel", (req, res) => {
 app.post("/api/channel/:channel/delete", (req, res) => {
     if (req.body) {
         if (req.body.content) {
-            delete req.body._id
-            channelDatabase.collection(req.params.channel).deleteOne(req.body, (err, obj) => {
-                if (err) throw err;
-                if (obj.deletedCount === 0) {
-                    fourzerofour(req, res)
-                }
-                else {
-                    channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
-                        if (err) throw err
-                        result.forEach(message => {
-                            delete message["ip"]
-                            delete message["_id"]
+            if (req.headers["sal-token"] === config.dashboardPassword) {
+                delete req.body._id
+                channelDatabase.collection(req.params.channel).deleteOne(req.body, (err, obj) => {
+                    if (err) throw err;
+                    if (obj.deletedCount === 0) {
+                        fourzerofour(req, res)
+                    }
+                    else {
+                        channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
+                            if (err) throw err
+                            result.forEach(message => {
+                                delete message["ip"]
+                                delete message["_id"]
+                            })
+                            res.send(result)
                         })
-                        res.send(result)
-                    })
-                    log('info', 'INFO', `Message deleted: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
-                }
-            });
+                        log('info', 'INFO', `Message deleted: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
+                    }
+                })
+            }
+            else {
+                res.status(403).json({ error: "Invalid Password" });
+                log('error', '', `Invalid Password: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Password: ${req.body.password}`)
+            }
         }
         else fourzerozero(req, res)
     }
