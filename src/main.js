@@ -61,12 +61,13 @@ app.post("/api/login", (req, res) => {
 app.post("/api/channel/:channel", (req, res) => {
     if (req.body) {
         if (req.body.content) {
-            for (var key in req.body) if (!(key === "content")) delete req.body[key]
+            for (var key in req.body) if (!(key === "content" || key === "reply")) delete req.body[key]
             if (req.headers["sal-token"] === config.dashboardPassword) {
                 req.body.bold = true
             }
             else {
                 req.body.bold = false
+                delete req.body.reply
             }
             req.body.ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
             req.body.date = Math.floor(Date.now() / 1000)
@@ -121,7 +122,40 @@ app.post("/api/channel/:channel/delete", (req, res) => {
     else fourzerozero(req, res)
 })
 
-
+app.post("/api/channel/:channel/edit", (req, res) => {
+    if (req.body) {
+        if (req.body.newContent && req.body.oldContent) {
+            if (req.headers["sal-token"] === config.dashboardPassword) {
+                delete req.body._id
+                var newvalues = { $set: {"content": req.body.newContent} };
+                channelDatabase.collection(req.params.channel).updateOne(req.body.oldContent, newvalues, (err, obj) => {
+                    if (err) throw err;
+                    console.log(obj)
+                    if (obj.modifiedCount === 0) {
+                        fourzerofour(req, res)
+                    }
+                    else {
+                        channelDatabase.collection(req.params.channel).find().sort({ "date": 1 }).toArray((err, result) => {
+                            if (err) throw err
+                            result.forEach(message => {
+                                delete message["ip"]
+                                delete message["_id"]
+                            })
+                            res.send(result)
+                        })
+                        log('info', 'INFO', `Message deleted: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Content: ${req.body.content}    Channel: ${req.params.channel}.`)
+                    }
+                })
+            }
+            else {
+                res.status(403).json({ error: "Invalid Password" });
+                log('error', '', `Invalid Password: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Password: ${req.body.password}`)
+            }
+        }
+        else fourzerozero(req, res)
+    }
+    else fourzerozero(req, res)
+})
 
 app.all('*', function (req, res) {
     fourzerofour(req, res)
