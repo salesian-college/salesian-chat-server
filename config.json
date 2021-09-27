@@ -1,6 +1,6 @@
 {
     "mongo": {
-        "url": "chat-server",
+        "url": "mongo-db",
         "port": "27017",
         "username": "salesian",
         "password": "S4les1an1901"
