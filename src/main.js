@@ -130,7 +130,6 @@ app.post("/api/channel/:channel/edit", (req, res) => {
                 var newvalues = { $set: {"content": req.body.newContent} };
                 channelDatabase.collection(req.params.channel).updateOne(req.body.oldContent, newvalues, (err, obj) => {
                     if (err) throw err;
-                    console.log(obj)
                     if (obj.modifiedCount === 0) {
                         fourzerofour(req, res)
                     }
