@@ -2,10 +2,13 @@ import log from './utils/log'
 import express from 'express'
 import cors from 'cors'
 import config from '../config.json'
-import e from 'express';
+import e from 'express'
+import ws from 'ws'
 
 var MongoClient = require("mongodb").MongoClient;
 const app = express()
+
+var wss = new ws.Server({ port: 40510 })
 
 let channelDatabase
 
@@ -21,6 +24,20 @@ const fourzerozero = (req, res) => {
     res.status(400).json({ error: "Not Found" });
     log('error', '', `Bad Request:    IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Address: ${req.originalUrl}`)
 }
+
+wss.on('connection', function (ws) {
+    ws.on('message', function (message) {
+        log('info', 'INFO', 'Recieved Message: ' + message)
+    })
+
+    log('info', 'INFO', 'Client connected to ws.')
+})
+
+wss.broadcast = function broadcast(msg){
+    wss.clients.forEach(function each(client){
+      client.send(msg);
+    });
+  };
 
 app.get("/api/channel", (req, res) => {
     channelDatabase.listCollections()
@@ -127,7 +144,7 @@ app.post("/api/channel/:channel/edit", (req, res) => {
         if (req.body.newContent && req.body.oldContent) {
             if (req.headers["sal-token"] === config.dashboardPassword) {
                 delete req.body._id
-                var newvalues = { $set: {"content": req.body.newContent} };
+                var newvalues = { $set: { "content": req.body.newContent } };
                 channelDatabase.collection(req.params.channel).updateOne(req.body.oldContent, newvalues, (err, obj) => {
                     if (err) throw err;
                     if (obj.modifiedCount === 0) {
@@ -156,8 +173,22 @@ app.post("/api/channel/:channel/edit", (req, res) => {
     else fourzerozero(req, res)
 })
 
-app.all('*', function (req, res) {
-    fourzerofour(req, res)
+app.post("/api/channel/:channel/broadcast", (req, res) => {
+    if (req.body) {
+        if (req.body.content) {
+            if (req.headers["sal-token"] === config.dashboardPassword) {
+                wss.broadcast(JSON.stringify(req.body))
+                log('info', 'INFO', 'Broadcasted message: ' + req.body.content)
+                res.json({"status": true})
+            }
+            else {
+                res.status(403).json({ error: "Invalid Password" });
+                log('error', '', `Invalid Password: IP: ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}    Password: ${req.body.password}`)
+            }
+        }
+        else fourzerozero(req, res)
+    }
+    else fourzerozero(req, res)
 })
 
 MongoClient.connect(`mongodb://${config.mongo.username}:${config.mongo.password}@${config.mongo.url}:${config.mongo.port}/`, (err, db) => {

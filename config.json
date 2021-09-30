@@ -1,6 +1,6 @@
 {
     "mongo": {
-        "url": "mongo-db",
+        "url": "localhost",
         "port": "27017",
         "username": "salesian",
         "password": "S4les1an1901"
@@ -26,7 +26,8 @@
         "physics",
         "politics",
         "psychology",
-        "spanish"
+        "spanish",
+        "main"
     ],
     "dashboardPassword": "S4les1an1901"
 }
