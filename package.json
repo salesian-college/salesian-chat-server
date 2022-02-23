@@ -2,8 +2,8 @@
   "name": "server",
   "version": "1.0.0",
   "main": "src/main.js",
-  "repository": "https://github.com/monoxane/skeleton",
-  "author": "Oliver Herrmann <oliver@monoxane.io>",
+  "repository": "https://github.com/salesian-college/salesian-chat-server",
+  "author": "Joshua Sanderson <sanderson.joshua@salesian.hants.sch.uk>",
   "license": "MIT",
   "private": "true",
   "scripts": {
